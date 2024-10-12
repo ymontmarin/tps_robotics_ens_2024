@@ -1,0 +1,8 @@
+def qrand(check=False):
+    '''
+    Return a random configuration. If check is True, this
+    configuration is not is collision
+    '''
+    while True:
+        q = np.random.rand(2)*6.4-3.2  # sample between -3.2 and +3.2.
+        if not check or not coll(q): return q

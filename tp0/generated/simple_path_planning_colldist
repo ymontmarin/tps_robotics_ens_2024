@@ -1,0 +1,6 @@
+def collisionDistance(q):
+     '''Return the minimal distance between robot and environment. '''
+     pin.updateGeometryPlacements(robot.model,robot.data,robot.collision_model,robot.collision_data,q)
+     if pin.computeCollisions(robot.collision_model,robot.collision_data,False): 0
+     idx = pin.computeDistances(robot.collision_model,robot.collision_data)
+     return robot.collision_data.distanceResults[idx].min_distance

@@ -1,0 +1,2 @@
+viz = MeshcatVisualizer(robot)
+viz.display(robot.q0)
