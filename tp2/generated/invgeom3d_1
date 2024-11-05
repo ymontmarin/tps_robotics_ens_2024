@@ -1,0 +1,13 @@
+def cost(q):
+    '''Compute score from a configuration'''
+    m = robot.framePlacement(q, 22)
+    p = m.translation
+    offset = m.rotation[:, 2] * radius
+    return norm(p +  offset - target)**2
+
+
+def callback(q):
+    viz.display(q)
+    time.sleep(1e-2)
+
+q_touch = fmin_bfgs(cost, robot.q0, callback=callback)

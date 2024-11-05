@@ -1,0 +1,20 @@
+q = qopt.copy()
+vq = np.array([2., 0, 0, 4., 0, 0])
+idx = 6
+
+oMend = robot.placement(q, idx)
+endMbox = oMend.inverse() * oMbox  # Placement of the box wrt end effector
+
+for i in range(100):
+    # Chose new configuration of the robot
+    q += vq / 40
+    q[2] = 1.71 + math.sin(i * 0.05) / 2
+
+    # Gets the new position of the box
+    oMend = robot.placement(q, idx)
+    oMbox = oMend * endMbox
+
+    # Display new configuration for robot and box
+    viz.applyConfiguration(boxID, oMbox)
+    viz.display(q)
+    time.sleep(1e-2)
