@@ -1,0 +1,63 @@
+hq_c    = []   ### For storing the logs of measured trajectory q
+hqdes_c = []   ### For storing the logs of desired trajectory qdes
+
+already_contact = set()  # Track contact
+
+for it in range(N_steps):
+    t = it*dt
+
+    # Compute the model.
+    M = pin.crba(robot.model, robot.data, q)
+    b = pin.nle(robot.model, robot.data, q, vq)
+
+    # Compute the PD control.
+    tauq = - Kp * (q - qdes(t)) - Kv * (vq - qdes.velocity(t)) + alpha * qdes.acceleration(t)
+    tauq_frottement = - Kf * vq
+    
+    # Simulated the resulting acceleration (forward dynamics
+    aq0 = inv(M) @ (tauq_frottement + tauq - b)
+
+    # Check collision
+    colwrap.computeCollisions(q, vq)
+    raw_collisions = colwrap.getCollisionList()
+    raw_dist = colwrap.getCollisionDistances(raw_collisions)
+
+    # Keep only real colision
+    collisions = [c for c, d in zip(raw_collisions, raw_dist) if d <= -1e-4]
+
+    if not collisions:
+        aq = aq0
+        already_contact = set()
+    else:
+        dist = colwrap.getCollisionDistances(collisions)
+        J = colwrap.getCollisionJacobian(collisions)
+        JdotQdot = colwrap.getCollisionJdotQdot(collisions)
+
+        # Update contact tracking and nullify velocity of new contact
+        col_id = [e[0] for e in collisions]
+        new_col_idx = [i for i, e in enumerate(col_id) if e not in already_contact]
+        already_contact = set(col_id)
+        if new_col_idx:
+            J_proj = np.stack([J[i] for i in new_col_idx], axis=0)
+            vq -= (pinv(J_proj) @ J_proj) @ vq
+
+        # Find real acceleration using Gauss principle
+        A = M
+        b = M @ aq0
+        C = J
+        d = - JdotQdot - Kp_c * dist - Kv_c * J @ vq
+        [aq,cost,_,niter,lag,iact] = quadprog.solve_qp(A,b,C.T,d)  # Notice that C.T is passed instead of C
+
+    # Integrate the acceleration.
+    vq += aq * dt
+    q = pin.integrate(robot.model, q, vq * dt)
+
+    # Display every TDISP iterations.
+    TDISP = 50e-3    # Display every 50ms
+    if not it % int(TDISP/dt):  # Only display once in a while ...
+        viz.display(q)
+        time.sleep(TDISP)
+
+    # Log the history.
+    hq_c.append(q.copy())
+    hqdes_c.append(qdes.copy())
